@@ -30,7 +30,7 @@ public class BrandController {
      * ブランド一覧画面表示
      *
      * @param model
-     * @return ブランド一覧画面.
+     * @return ブランド一覧画面
      */
     @GetMapping
     public String listBrands(@RequestParam(required = false) String keyword, Model model) {
