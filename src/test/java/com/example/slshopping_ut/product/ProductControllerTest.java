@@ -1,5 +1,14 @@
 package com.example.slshopping_ut.product;
 
+import static org.hamcrest.Matchers.*;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+import java.util.ArrayList;
+import java.util.List;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -7,9 +16,13 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import com.example.slshopping_ut.brand.BrandService;
 import com.example.slshopping_ut.category.CategoryService;
+import com.example.slshopping_ut.entity.Brand;
+import com.example.slshopping_ut.entity.Category;
+import com.example.slshopping_ut.entity.Product;
 
 @ExtendWith(MockitoExtension.class)
 class ProductControllerTest {
@@ -35,7 +48,8 @@ class ProductControllerTest {
 
     @BeforeEach
     void setup() {
-
+        //MockMvcの生成
+        this.mockMvc = MockMvcBuilders.standaloneSetup(target).alwaysDo(log()).build();
     }
 
     /**
@@ -55,6 +69,29 @@ class ProductControllerTest {
      */
     @Test
     void testListProducts() throws Exception {
+        //準備
+        List<Product> products = new ArrayList<>();
+        String keyword = null;
+
+        //スタブを設定
+        //doReturn(返り値の設定).when(対象のモック).対象のメソッド（引数）
+        doReturn(products).when(this.mockProductService).listAll(keyword);
+
+        //検証
+        /*
+         * perform(get("path") httpメソッドとパスの指定
+         * param("key", val) クエリストリングの指定
+         * andExpect(検証したいこと)
+         * 検証例：
+         * status().isOk() ステータスコードの検証
+         * view().name("テンプレートファイル名") テンプレートファイルの呼び出しがあっているか
+         * model().attribute("key", val) modelに格納されているか
+         */
+        this.mockMvc.perform(get("/products").param("keyword", keyword)) // リクエストの情報
+                .andExpect(status().isOk()) // ステータスの検証
+                .andExpect(view().name("products/products")) // テンプレートファイルの呼び出し検証
+                .andExpect(model().attribute("listProducts", products)) // modelに格納されている要素の検証
+                .andExpect(model().attribute("keyword", keyword));
 
     }
 
@@ -72,6 +109,15 @@ class ProductControllerTest {
      */
     @Test
     void testNewProduct() throws Exception {
+        //検証
+        /*
+         * 検証例：
+         * model().attribute("key", instanceOf(対象クラス名.class)) モデルに格納されているクラスが、対象インスタンスか
+         */
+        this.mockMvc.perform(get("/products/new"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("products/product_form"))
+                .andExpect(model().attribute("product", instanceOf(Product.class)));
 
     }
 
@@ -93,6 +139,30 @@ class ProductControllerTest {
      */
     @Test
     void testSaveProduct() throws Exception {
+        //準備
+        Brand brand = new Brand(1L, "brandA");
+        Category category = new Category(1L, "categoryA");
+        Product product = new Product(1L, "productA", "description", 1, "image",
+            1.0, 1.0, 1.0, 1.0, category, brand);
+
+        //スタブを設定
+        doReturn(true).when(this.mockProductImageService).isValid(null);
+
+        doReturn(true).when(this.mockProductService).checkUnique(product);
+        
+        doReturn(product).when(this.mockProductService).save(product);
+
+        //検証
+        /*
+         * 検証例：
+         * redirectedUrl("path") リダイレクト先の検証
+         * flash().attribute("key", val) // リダイレクト時の引継ぎ情報の検証
+         */
+        this.mockMvc.perform(post("/products/save")
+                .flashAttr("product", product))
+                .andExpect(status().isFound())
+                .andExpect(redirectedUrl("/products"))
+                .andExpect(flash().attribute("success_message", "登録に成功しました"));
 
     }
 
@@ -111,7 +181,18 @@ class ProductControllerTest {
      */
     @Test
     void testDetailProduct() throws Exception {
+        //準備
+        Long id = 1L;
+        Product product = new Product();
 
+        //スタブを設定
+        doReturn(product).when(this.mockProductService).get(id);
+
+        //検証
+        this.mockMvc.perform(get("/products/detail/{id}", id))
+                .andExpect(status().isOk())
+                .andExpect(view().name("products/product_detail"))
+                .andExpect(model().attribute("product", product));
     }
 
     /**
@@ -129,6 +210,18 @@ class ProductControllerTest {
      */
     @Test
     void testEditProductForm() throws Exception {
+        //準備
+        Long id = 1L;
+        Product product = new Product();
+
+        //スタブを設定
+        when(this.mockProductService.get(id)).thenReturn(product);
+
+        //検証
+        this.mockMvc.perform(get("/products/edit/{id}", id))
+                .andExpect(status().isOk())
+                .andExpect(view().name("products/product_edit"))
+                .andExpect(model().attribute("product", product));
 
     }
 
@@ -150,6 +243,23 @@ class ProductControllerTest {
      */
     @Test
     void testEditProduct() throws Exception {
+        //準備
+        Long id = 1L;
+        Brand brand = new Brand(1L, "brandA");
+        Category category = new Category(1L, "categoryA");
+        Product product = new Product(id, "productA", "description", 1, "image",
+            1.0, 1.0, 1.0, 1.0, category, brand);
+
+        //スタブを設定
+        doReturn(true).when(this.mockProductImageService).isValid(null);
+        doReturn(true).when(this.mockProductService).checkUnique(product);
+        doReturn(product).when(this.mockProductService).save(product);
+
+        //検証
+        this.mockMvc.perform(post("/products/edit/{id}", id).flashAttr("product", product))
+                .andExpect(status().isFound())
+                .andExpect(redirectedUrl("/products"))
+                .andExpect(flash().attribute("success_message", "更新に成功しました"));
 
     }
 
@@ -167,6 +277,17 @@ class ProductControllerTest {
      */
     @Test
     void testDeleteProduct() throws Exception {
+        //準備
+        Long id = 1L;
+
+        //スタブの設定
+        doNothing().when(this.mockProductService).delete(id);
+
+        //検証
+        this.mockMvc.perform(get("/products/delete/{id}", id))
+                .andExpect(status().isFound())
+                .andExpect(redirectedUrl("/products"))
+                .andExpect(flash().attribute("success_message", "削除に成功しました"));
 
     }
 }
