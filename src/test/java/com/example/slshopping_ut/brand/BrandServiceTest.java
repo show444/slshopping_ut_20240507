@@ -73,8 +73,8 @@ class BrandServiceTest {
         );
         
         doReturn(expected).when(this.mockBrandRepository).findAll();
-        //target.listAll(null)を修正
-        assertThat(target.listAll()).isEqualTo(expected);
+        
+        assertThat(target.listAll(null)).isEqualTo(expected);
     }
 
     /**

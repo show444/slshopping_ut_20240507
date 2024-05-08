@@ -1,10 +1,21 @@
 package com.example.slshopping_ut.category;
 
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.crossstore.ChangeSetPersister.NotFoundException;
+
+import com.example.slshopping_ut.entity.Category;
 
 @ExtendWith(MockitoExtension.class)
 class CategoryServiceTest {
@@ -29,6 +40,16 @@ class CategoryServiceTest {
      */
     @Test
     void testListAll() {
+        List<Category> expected = Arrays.asList(
+            new Category(1L, "categoryA"),
+            new Category(2L, "categoryB")
+        );
+
+        //スタブの設定
+        doReturn(expected).when(this.mockCategoryRepository).findAll();
+
+        //検証処理
+        assertThat(target.listAll()).isEqualTo(expected);
 
     }
 
@@ -45,7 +66,16 @@ class CategoryServiceTest {
      */
     @Test
     void testListAll_argumentIsNull() {
+        List<Category> expected = Arrays.asList(
+            new Category(1L, "categoryA"),
+            new Category(2L, "categoryB")
+        );
 
+        //スタブの設定
+        doReturn(expected).when(this.mockCategoryRepository).findAll();
+
+        //検証処理
+        assertThat(target.listAll(null)).isEqualTo(expected);
     }
 
     /**
@@ -61,7 +91,16 @@ class CategoryServiceTest {
      */
     @Test
     void testListAll_argumentIsEmpty() {
+        List<Category> expected = Arrays.asList(
+            new Category(1L, "categoryA"),
+            new Category(2L, "categoryB")
+        );
 
+        //スタブの設定
+        doReturn(expected).when(this.mockCategoryRepository).findAll();
+
+        //検証処理
+        assertThat(target.listAll("")).isEqualTo(expected);
     }
 
     /**
@@ -77,7 +116,19 @@ class CategoryServiceTest {
      */
     @Test
     void testListAll_argumentIsNotEmpty() {
+        //listAllメソッドに渡す文字列
+        String keyword = "category";
 
+        List<Category> expected = Arrays.asList(
+            new Category(1L, "categoryA"),
+            new Category(2L, "categoryB")
+        );
+
+        //スタブの設定
+        doReturn(expected).when(this.mockCategoryRepository).search(keyword);
+
+        //検証処理
+        assertThat(target.listAll(keyword)).isEqualTo(expected);
     }
 
     /**
@@ -92,7 +143,14 @@ class CategoryServiceTest {
      */
     @Test
     void testCheckUnique_noDuplication() {
+        //カテゴリ名が重複していないブランド情報を作成
+        Category newCategory = new Category(1L, "categoryA");
 
+        //スタブの設定
+        doReturn(null).when(this.mockCategoryRepository).findByName(anyString());
+
+        //検証処理
+        assertThat(target.checkUnique(newCategory)).isTrue();
     }
 
     /**
@@ -107,7 +165,17 @@ class CategoryServiceTest {
      */
     @Test
     void testCheckUnique_duplicate() {
+        //準備 カテゴリ名が重複するカテゴリ情報を作成
+        Category newCategory = new Category(1L, "categoryA");
 
+        //スタブに設定するデータを作成
+        Category mockCategory = new Category(1L, "categoryA");
+
+        //スタブの設定
+        doReturn(mockCategory).when(this.mockCategoryRepository).findByName(newCategory.getName());
+
+        //検証処理
+        assertThat(target.checkUnique(newCategory)).isFalse();
     }
 
     /**
@@ -122,7 +190,19 @@ class CategoryServiceTest {
      */
     @Test
     void testGet_noThrowsException() {
+        //準備 テストデータに存在するID
+        Long id = 1L;
 
+        //スタブに設定するデータを作成
+        Optional<Category> category = Optional.of(new Category());
+
+        //スタブの設定
+        doReturn(category).when(this.mockCategoryRepository).findById(id);
+
+        //検証処理
+        assertThatCode(() -> {
+            target.get(id);
+        }).doesNotThrowAnyException();
     }
 
     /**
@@ -137,7 +217,20 @@ class CategoryServiceTest {
      */
     @Test
     void testGet_throwsException() {
+        //準備 テストデータに存在しないID
+        Long id = 1000L;
 
+        //スタブに設定するデータを作成
+        Optional<Category> category = Optional.ofNullable(null);
+
+        //スタブの設定
+        doReturn(category).when(this.mockCategoryRepository).findById(id);
+
+        //検証処理
+        assertThatThrownBy(() ->{
+            target.get(id);
+        })
+        .isInstanceOf(NotFoundException.class);
     }
 
     /**
@@ -152,6 +245,16 @@ class CategoryServiceTest {
      */
     @Test
     void testGet() throws Exception {
+        //準備 任意のID
+        Long id = 1L;
 
+        //スタブに設定するデータを作成
+        Optional<Category> category = Optional.of(new Category());
+
+        //スタブの設定
+        doReturn(category).when(this.mockCategoryRepository).findById(id);
+
+        //検証処理
+        assertThat(target.get(id)).isEqualTo(category.get());
     }
 }
