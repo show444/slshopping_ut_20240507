@@ -1,5 +1,15 @@
 package com.example.slshopping_ut.user;
 
+import static org.hamcrest.Matchers.*;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -7,6 +17,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+
+import com.example.slshopping_ut.entity.Role;
+import com.example.slshopping_ut.entity.User;
 
 @ExtendWith(MockitoExtension.class)
 class UserControllerTest {
@@ -23,7 +37,8 @@ class UserControllerTest {
 
     @BeforeEach
     void setup() {
-
+        // MockMvcの生成
+        this.mockMvc = MockMvcBuilders.standaloneSetup(target).alwaysDo(log()).build();
     }
 
     /**
@@ -43,7 +58,19 @@ class UserControllerTest {
      */
     @Test
     void testListUsers() throws Exception {
+        //準備
+        List<User> users = new ArrayList<>();
+        String keyword = null;
 
+        //スタブを設定
+        doReturn(users).when(this.mockUserService).listAll(keyword);
+
+        //検証
+        this.mockMvc.perform(get("/users").param("keyword", keyword))
+                .andExpect(status().isOk())
+                .andExpect(view().name("users/users"))
+                .andExpect(model().attribute("listUsers", users))
+                .andExpect(model().attribute("keyword", keyword));
 
     }
 
@@ -61,7 +88,11 @@ class UserControllerTest {
      */
     @Test
     void testNewUser() throws Exception {
-
+        //検証
+        this.mockMvc.perform(get("/users/new"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("users/user_form"))
+                .andExpect(model().attribute("user", instanceOf(User.class)));
     }
 
     /**
@@ -81,7 +112,22 @@ class UserControllerTest {
      */
     @Test
     void testNewUserForm() throws Exception {
+        //準備
+        Set<Role> roles = Set.of(
+            new Role(1L, "Admin", "管理者")
+        );
+        User user = new User(1L, "aaa@example.com", "password", "userA", false, roles);
 
+        //スタブの設定
+        doReturn(true).when(this.mockUserService).checkUnique(user);
+        //doNothing()は返り値がない時
+        doReturn(user).when(this.mockUserService).save(user);
+
+        //検証
+        this.mockMvc.perform(post("/users/save").flashAttr("user", user))
+                .andExpect(status().isFound())
+                .andExpect(redirectedUrl("/users"))
+                .andExpect(flash().attribute("success_message", "登録に成功しました"));
     }
 
     /**
@@ -99,6 +145,18 @@ class UserControllerTest {
      */
     @Test
     void testDetailUser() throws Exception {
+        //準備
+        Long id = 1L;
+        User user = new User();
+
+        //スタブの設定
+        doReturn(user).when(this.mockUserService).get(id);
+
+        //検証
+        this.mockMvc.perform(get("/users/detail/{id}", id))
+                .andExpect(status().isOk())
+                .andExpect(view().name("users/user_detail"))
+                .andExpect(model().attribute("user", user));
 
     }
 
@@ -117,6 +175,18 @@ class UserControllerTest {
      */
     @Test
     void testEditUserForm() throws Exception {
+        //準備
+        Long id = 1L;
+        User user = new User();
+
+        //スタブの設定
+        when(this.mockUserService.get(id)).thenReturn(user);
+
+        //検証
+        this.mockMvc.perform(get("/users/edit/{id}", id))
+                .andExpect(status().isOk())
+                .andExpect(view().name("users/user_edit"))
+                .andExpect(model().attribute("user", user));
 
     }
 
@@ -137,6 +207,22 @@ class UserControllerTest {
      */
     @Test
     void testEditProduct() throws Exception {
+        //準備
+        Long id = 1L;
+        Set<Role> roles = Set.of(
+            new Role(1L, "Admin", "管理者")
+        );
+        User user = new User(1L, "aaa@example.com", "password", "userA", false, roles);
+
+        //スタブの設定
+        doReturn(true).when(this.mockUserService).checkUnique(user);
+        doReturn(user).when(this.mockUserService).save(user);
+
+        //検証
+        this.mockMvc.perform(post("/users/edit/{id}", id).flashAttr("user", user))
+                .andExpect(status().isFound())
+                .andExpect(redirectedUrl("/users"))
+                .andExpect(flash().attribute("success_message", "更新に成功しました"));
 
     }
 }
